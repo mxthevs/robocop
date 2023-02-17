@@ -10,6 +10,13 @@ class ForbiddenModuleError extends Error {
   }
 }
 
+const BINARY_OPS = {
+  '+': (a, b) => a + b,
+  '-': (a, b) => a - b,
+  '*': (a, b) => a * b,
+  '/': (a, b) => a / b,
+}
+
 const isForbidden = (module) => {
   const forbiddenRequires =
     ['fs', 'child_process', 'path', 'os', 'http', 'https', 'net', 'tls', 'dns', 'url', 'util', 'vm']
@@ -43,12 +50,21 @@ const hasIdentifierArgument = (node) => {
   return node.arguments[0].type === 'Identifier';
 }
 
+const hasBinaryExpressionArgument = (node) => {
+  return node.arguments[0].type === 'BinaryExpression';
+}
+
 const walkRequires = (tokens, variables = {}, callback) => {
   walk(tokens, node => {
     if (isRequire(node) && hasLiteralArgument(node)) {
       callback(node.arguments[0].value);
     } else if (isRequire(node) && hasIdentifierArgument(node)) {
       callback(variables[node.arguments[0].name]);
+    } else if (isRequire(node) && hasBinaryExpressionArgument(node)) {
+      const expression = node.arguments[0];
+      const left = expression.left.type === 'Literal' ? expression.left.value : variables[expression.left.name];
+      const right = expression.right.type === 'Literal' ? expression.right.value : variables[expression.right.name];
+      callback(BINARY_OPS[expression.operator](left, right));
     }
   });
 
