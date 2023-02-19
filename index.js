@@ -20,7 +20,7 @@ const BINARY_OPS = {
 const isForbidden = (module) => {
   const forbiddenRequires =
     ['fs', 'child_process', 'path', 'os', 'http', 'https', 'net', 'tls', 'dns', 'url', 'util', 'vm']
-    .map(module => [module, `${module}/promises`])
+    .map(module => [module, `${module}/promises`, `node:${module}`, `node:${module}/promises`])
     .flat();
 
   return forbiddenRequires.includes(module) || module === 'unknown';
