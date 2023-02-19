@@ -23,7 +23,7 @@ const isForbidden = (module) => {
     .map(module => [module, `${module}/promises`])
     .flat();
 
-  return forbiddenRequires.includes(module);
+  return forbiddenRequires.includes(module) || module === 'unknown';
 }
 
 const getVariables = (tokens) => {
@@ -54,6 +54,10 @@ const hasBinaryExpressionArgument = (node) => {
   return node.arguments[0].type === 'BinaryExpression';
 }
 
+const hasCallExpressionArgument = (node) => {
+  return node.arguments[0].type === 'CallExpression';
+}
+
 const walkRequires = (tokens, variables = {}, callback) => {
   walk(tokens, node => {
     if (isRequire(node) && hasLiteralArgument(node)) {
@@ -65,6 +69,10 @@ const walkRequires = (tokens, variables = {}, callback) => {
       const left = expression.left.type === 'Literal' ? expression.left.value : variables[expression.left.name];
       const right = expression.right.type === 'Literal' ? expression.right.value : variables[expression.right.name];
       callback(BINARY_OPS[expression.operator](left, right));
+    } else if (isRequire(node) && hasCallExpressionArgument(node)) {
+      // if the argument for require is a CallExpression, e.g require(fn())
+      // just hardcode a forbidden module
+      callback('unknown');
     }
   });
 
