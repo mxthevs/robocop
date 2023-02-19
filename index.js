@@ -79,7 +79,7 @@ const walkRequires = (tokens, variables = {}, callback) => {
   return tokens;
 }
 
-const hasForbiddenRequires = (tokens, variables = {}) => {
+const hasForbiddenRequires = ({ tokens, variables }) => {
   let found = false;
 
   walkRequires(tokens, variables, module => {
@@ -89,7 +89,7 @@ const hasForbiddenRequires = (tokens, variables = {}) => {
   return found;
 }
 
-const getForbiddenRequires = (tokens, variables = {}) => {
+const getForbiddenRequires = ({ tokens, variables }) => {
   const forbiddenRequires = [];
 
   walkRequires(tokens, variables, module => {
@@ -99,13 +99,19 @@ const getForbiddenRequires = (tokens, variables = {}) => {
   return forbiddenRequires;
 }
 
-const runExternalCode = (code) => {
+const parseExternalCode = (code) => {
   const tokens = esprima.parseScript(code, { range: true });
   const variables = getVariables(tokens);
-  const hasForbidden = hasForbiddenRequires(tokens, variables);
+
+  return { tokens, variables };
+}
+
+const runExternalCode = (code) => {
+  const { tokens, variables } = parseExternalCode(code);
+  const hasForbidden = hasForbiddenRequires({ tokens, variables });
 
   if (hasForbidden) {
-    const forbiddenRequires = getForbiddenRequires(tokens, variables);
+    const forbiddenRequires = getForbiddenRequires({ tokens, variables });
     throw new ForbiddenModuleError(forbiddenRequires);
   }
 
@@ -113,5 +119,7 @@ const runExternalCode = (code) => {
 }
 
 module.exports = {
+  parseExternalCode,
+  hasForbiddenRequires,
   run: runExternalCode
 }
