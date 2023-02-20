@@ -49,20 +49,19 @@ const parseBinaryExpressionValues = (expression, variables) => {
   const left =
     expression.left.type === 'Literal'
       ? expression.left.value
-      : (expression.type === 'Identifier'
+      : (expression.left.type === 'Identifier'
         ? variables[expression.left.name] 
         : parseBinaryExpressionValues(expression.left, variables));
 
   const right = 
     expression.right.type === 'Literal' 
-    ? expression.right.value 
-    : (expression.type === 'Identifier' 
-      ? variables[expression.right.name]
-      : parseBinaryExpressionValues(expression.right, variables));
+      ? expression.right.value 
+      : (expression.right.type === 'Identifier' 
+        ? variables[expression.right.name]
+        : parseBinaryExpressionValues(expression.right, variables));
 
   return BINARY_OPS[expression.operator](left, right);
 }
-
 
 const isRequire = (node) => {
   return node.type === 'CallExpression' && node.callee.name === 'require'
