@@ -1,7 +1,11 @@
 const assert = require('node:assert');
-const { parseExternalCode, hasForbiddenRequires } = require('./index.js');
+const { 
+  parseExternalCode,
+  hasForbiddenRequires,
+  hasInfiniteLoops
+} = require('./index.js');
 
-const unsafeCases = [
+const unsafeRequires = [
   "require('fs').rmdir('../', { recursive: true }, () => { /**/ })",
   "require('fs/promises').rmdir('../', { recursive: true }, () => { /**/ })",
   "require('node:fs').rmdir('../', { recursive: true }, () => { /**/ })",
@@ -24,10 +28,34 @@ const unsafeCases = [
   "eval('require(\"p\" + \"at\" + \"h\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
 ];
 
+const infiniteLoops = [
+  "while (true) { }",
+  "while (1) { }",
+  "let x = true; while (x) { }",
+  "let x = 1; while (x) { }",
+  "let x = 1; let y = 1; while (x+y) { }",
+  "while (1 > 0) { }",
+  "eval('while (true) { }')",
+  "eval('while (1) { }')",
+  "eval('let x = true; while (x) { }')",
+  "eval('let x = 1; while (x) { }')",
+  "eval('let x = 1; let y = 1; while (x+y) { }')",
+  "eval('while (1 > 0) { }')",
+]
+
+const unsafeCases = [
+  ...unsafeRequires,
+  ...infiniteLoops,
+]
+
+const hasUnsafe = (metadata) => {
+  return hasForbiddenRequires(metadata) || hasInfiniteLoops(metadata);
+}
+
 const unsafeCount = 
   unsafeCases
   .map(parseExternalCode)
-  .map(hasForbiddenRequires)
+  .map(hasUnsafe)
   .filter(Boolean)
   .length;
 

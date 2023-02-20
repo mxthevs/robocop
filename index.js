@@ -10,12 +10,40 @@ class ForbiddenModuleError extends Error {
   }
 }
 
+class InfiniteLoopError extends Error {
+  constructor() {
+    super('Infinite loop detected');
+    this.name = 'InfiniteLoopError';
+  }
+}
+
 const BINARY_OPS = {
   '+': (a, b) => a + b,
   '-': (a, b) => a - b,
   '*': (a, b) => a * b,
   '/': (a, b) => a / b,
-}
+  '%': (a, b) => a % b,
+  '**': (a, b) => a ** b,
+  '|': (a, b) => a | b,
+  '&': (a, b) => a & b,
+  '^': (a, b) => a ^ b,
+  '<<': (a, b) => a << b,
+  '>>': (a, b) => a >> b,
+  '>>>': (a, b) => a >>> b,
+  '==': (a, b) => a == b,
+  '!=': (a, b) => a != b,
+  '===': (a, b) => a === b,
+  '!==': (a, b) => a !== b,
+  '<': (a, b) => a < b,
+  '<=': (a, b) => a <= b,
+  '>': (a, b) => a > b,
+  '>=': (a, b) => a >= b,
+  '||': (a, b) => a || b,
+  '&&': (a, b) => a && b,
+  '??': (a, b) => a ?? b,
+  'in': (a, b) => a in b,
+  'instanceof': (a, b) => a instanceof b,
+};
 
 const isForbidden = (module) => {
   const forbiddenRequires =
@@ -71,6 +99,10 @@ const isEval = (node) => {
   return node.type === 'CallExpression' && node.callee.name === 'eval'
 }
 
+const isWhile = (node) => {
+  return node.type === 'WhileStatement';
+}
+
 const hasLiteralArgument = (node) => {
   return node.arguments[0].type === 'Literal';
 }
@@ -85,6 +117,22 @@ const hasBinaryExpressionArgument = (node) => {
 
 const hasCallExpressionArgument = (node) => {
   return node.arguments[0].type === 'CallExpression';
+}
+
+const whileHasLiteralArgument = (node) => {
+  return node.test.type === 'Literal';
+}
+
+const whileHasIdentifierArgument = (node) => {
+  return node.test.type === 'Identifier';
+}
+
+const whileHasBinaryExpressionArgument = (node) => {
+  return node.test.type === 'BinaryExpression';
+}
+
+const whileHasCallExpressionArgument = (node) => {
+  return node.test.type === 'CallExpression';
 }
 
 const walkRequires = (tokens, variables = {}, callback) => {
@@ -127,6 +175,25 @@ const walkEvals = (tokens, variables = {}, callback) => {
   });
 }
 
+const walkWhile = (tokens, variables, callback) => {
+  walk(tokens, node => {
+    if (isWhile(node) && whileHasLiteralArgument(node)) {
+      callback(!!node.test.value);
+    } else if (isWhile(node) && whileHasIdentifierArgument(node)) {
+      callback(variables[node.test.name]);
+    } else if (isWhile(node) && whileHasBinaryExpressionArgument(node)) {
+      const expression = node.test;
+      const result = parseBinaryExpressionValues(expression, variables);
+      callback(!!result);
+    } else if (isWhile(node) && whileHasCallExpressionArgument(node)) {
+      // if the argument for while is a CallExpression, e.g while(fn())
+      // just hardcode a inifinite loop
+      callback(true);
+    }
+  });
+}
+
+
 const hasForbiddenRequires = ({ tokens, variables }) => {
   let found = false;
 
@@ -137,6 +204,21 @@ const hasForbiddenRequires = ({ tokens, variables }) => {
   walkEvals(tokens, variables, code => {
     const { tokens, variables } = parseExternalCode(code);
     found = hasForbiddenRequires({ tokens, variables });
+  });
+
+  return found;
+}
+
+const hasInfiniteLoops = ({ tokens, variables }) => {
+  let found = false;
+  
+  walkWhile(tokens, variables, condition => {
+    found = condition;
+  });
+
+  walkEvals(tokens, variables, code => {
+    const { tokens, variables } = parseExternalCode(code);
+    found = hasInfiniteLoops({ tokens, variables });
   });
 
   return found;
@@ -155,6 +237,11 @@ const getForbiddenRequires = ({ tokens, variables }) => {
 const runExternalCode = (code) => {
   const { tokens, variables } = parseExternalCode(code);
   const hasForbidden = hasForbiddenRequires({ tokens, variables });
+  const hasInfinite = hasInfiniteLoops({ tokens, variables });
+
+  if (hasInfinite) {
+    throw new InfiniteLoopError();
+  }
 
   if (hasForbidden) {
     const forbiddenRequires = getForbiddenRequires({ tokens, variables });
@@ -175,5 +262,6 @@ const runExternalCode = (code) => {
 module.exports = {
   parseExternalCode,
   hasForbiddenRequires,
+  hasInfiniteLoops,
   run: runExternalCode
 }
