@@ -161,7 +161,15 @@ const runExternalCode = (code) => {
     throw new ForbiddenModuleError(forbiddenRequires);
   }
 
-  console.log(eval(code));
+  let env = process.env;
+  if (Object.keys(process.env).length > 0) {
+    process.env = {};
+  }
+
+  const result = eval(code);
+  process.env = env;
+
+  return result;
 }
 
 module.exports = {
