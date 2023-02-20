@@ -122,7 +122,7 @@ const walkEvals = (tokens, variables = {}, callback) => {
       // if the argument for eval is a CallExpression, e.g eval(fn())
       // just hardcode a forbidden module
       // TODO: parse the code inside the CallExpression
-      callback('require("fs")');
+      callback('require("unknown")');
     }
   });
 }
@@ -147,13 +147,6 @@ const getForbiddenRequires = ({ tokens, variables }) => {
 
   walkRequires(tokens, variables, module => {
     if (isForbidden(module)) forbiddenRequires.push(module);
-  });
-
-  walkEvals(tokens, variables, code => {
-    console.log(code);
-    const { tokens, variables } = parseExternalCode(code);
-    const hasForbidden = hasForbiddenRequires({ tokens, variables });
-    if (hasForbidden) forbiddenRequires.push(...getForbiddenRequires({ tokens, variables }));
   });
 
   return forbiddenRequires;
