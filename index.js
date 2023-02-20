@@ -60,6 +60,10 @@ const getVariables = (tokens) => {
   walk(tokens, node => {
     if (node.type === 'VariableDeclarator') {
       variables[node.id.name] = node.init.value;
+    } else if (node.type === 'ForStatement') {
+      if (node.init && node.init.type === 'VariableDeclaration') {
+        variables[node.init.declarations[0].id.name] = node.init.declarations[0].init.value;
+      }
     }
   });
 
@@ -78,13 +82,13 @@ const parseBinaryExpressionValues = (expression, variables) => {
     expression.left.type === 'Literal'
       ? expression.left.value
       : (expression.left.type === 'Identifier'
-        ? variables[expression.left.name] 
+        ? variables[expression.left.name]
         : parseBinaryExpressionValues(expression.left, variables));
 
-  const right = 
-    expression.right.type === 'Literal' 
-      ? expression.right.value 
-      : (expression.right.type === 'Identifier' 
+  const right =
+    expression.right.type === 'Literal'
+      ? expression.right.value
+      : (expression.right.type === 'Identifier'
         ? variables[expression.right.name]
         : parseBinaryExpressionValues(expression.right, variables));
 
@@ -101,6 +105,10 @@ const isEval = (node) => {
 
 const isWhile = (node) => {
   return node.type === 'WhileStatement';
+}
+
+const isFor = (node) => {
+  return node.type === 'ForStatement';
 }
 
 const hasLiteralArgument = (node) => {
@@ -133,6 +141,22 @@ const whileHasBinaryExpressionArgument = (node) => {
 
 const whileHasCallExpressionArgument = (node) => {
   return node.test.type === 'CallExpression';
+}
+
+const forHasNoInitTestUpdate = (node) => {
+  return node.init === null && node.test === null && node.update === null;
+}
+
+const forHasLiteralTest = (node) => {
+  return node.test.type === 'Literal';
+}
+
+const forHasIdentifierTest = (node) => {
+  return node.test.type === 'Identifier';
+}
+
+const forHasBinaryExpressionTest = (node) => {
+  return node.test.type === 'BinaryExpression';
 }
 
 const walkRequires = (tokens, variables = {}, callback) => {
@@ -175,7 +199,7 @@ const walkEvals = (tokens, variables = {}, callback) => {
   });
 }
 
-const walkWhile = (tokens, variables, callback) => {
+const walkWhiles = (tokens, variables, callback) => {
   walk(tokens, node => {
     if (isWhile(node) && whileHasLiteralArgument(node)) {
       callback(!!node.test.value);
@@ -193,6 +217,21 @@ const walkWhile = (tokens, variables, callback) => {
   });
 }
 
+const walkFors = (tokens, variables, callback) => {
+  walk(tokens, node => {
+    if (isFor(node) && forHasNoInitTestUpdate(node)) {
+      callback(true);
+    } else if (isFor(node) && forHasLiteralTest(node)) {
+      callback(!!node.test.value);
+    }  else if (isFor(node) && forHasIdentifierTest(node)) {
+      callback(variables[node.test.name]);
+    } else if (isFor(node) && forHasBinaryExpressionTest(node)) {
+      const expression = node.test;
+      const result = parseBinaryExpressionValues(expression, variables);
+      callback(!!result);
+    }
+  });
+}
 
 const hasForbiddenRequires = ({ tokens, variables }) => {
   let found = false;
@@ -211,8 +250,12 @@ const hasForbiddenRequires = ({ tokens, variables }) => {
 
 const hasInfiniteLoops = ({ tokens, variables }) => {
   let found = false;
-  
-  walkWhile(tokens, variables, condition => {
+
+  walkWhiles(tokens, variables, condition => {
+    found = condition;
+  });
+
+  walkFors(tokens, variables, condition => {
     found = condition;
   });
 
@@ -236,6 +279,7 @@ const getForbiddenRequires = ({ tokens, variables }) => {
 
 const runExternalCode = (code) => {
   const { tokens, variables } = parseExternalCode(code);
+
   const hasForbidden = hasForbiddenRequires({ tokens, variables });
   const hasInfinite = hasInfiniteLoops({ tokens, variables });
 
