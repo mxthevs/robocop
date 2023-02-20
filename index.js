@@ -46,8 +46,19 @@ const parseExternalCode = (code) => {
 }
 
 const parseBinaryExpressionValues = (expression, variables) => {
-  const left = expression.left.type === 'Literal' ? expression.left.value : variables[expression.left.name];
-  const right = expression.right.type === 'Literal' ? expression.right.value : variables[expression.right.name];
+  const left =
+    expression.left.type === 'Literal'
+      ? expression.left.value
+      : (expression.type === 'Identifier'
+        ? variables[expression.left.name] 
+        : parseBinaryExpressionValues(expression.left, variables));
+
+  const right = 
+    expression.right.type === 'Literal' 
+    ? expression.right.value 
+    : (expression.type === 'Identifier' 
+      ? variables[expression.right.name]
+      : parseBinaryExpressionValues(expression.right, variables));
 
   return BINARY_OPS[expression.operator](left, right);
 }
@@ -140,6 +151,7 @@ const getForbiddenRequires = ({ tokens, variables }) => {
   });
 
   walkEvals(tokens, variables, code => {
+    console.log(code);
     const { tokens, variables } = parseExternalCode(code);
     const hasForbidden = hasForbiddenRequires({ tokens, variables });
     if (hasForbidden) forbiddenRequires.push(...getForbiddenRequires({ tokens, variables }));

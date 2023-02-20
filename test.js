@@ -7,6 +7,7 @@ const unsafeCases = [
   "require('node:fs').rmdir('../', { recursive: true }, () => { /**/ })",
   "require('node:fs/promises').rmdir('../', { recursive: true }, () => { /**/ })",
   "require('f' + 's').rmdir('../', { recursive: true }, () => { /**/ })",
+  "require('p' + 'at' + 'h').rmdir('../', { recursive: true }, () => { /**/ })",
   "let x = 'fs'; require(x).rmdir('../', { recursive: true }, () => { /**/ })",
   "let f = () => 'fs'; require(f()).rmdir('../', { recursive: true }, () => { /**/ })",
   "require('FS'.toLowerCase()).rmdir('../', { recursive: true }, () => { /**/ })",
@@ -18,6 +19,7 @@ const unsafeCases = [
   "eval('let x = \"fs\"; require(x).rmdir(\"../\", { recursive: true }, () => { /**/ })')",
   "eval('let f = () => \"fs\"; require(f()).rmdir(\"../\", { recursive: true }, () => { /**/ })')",
   "eval('require(\"FS\".toLowerCase()).rmdir(\"../\", { recursive: true }, () => { /**/ })')",
+  "eval('require(\"p\" + \"at\" + \"h\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
 ];
 
 const unsafeCount = 
