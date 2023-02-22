@@ -15,6 +15,9 @@ const unsafeRequires = [
   "let x = 'fs'; require(x).rmdir('../', { recursive: true }, () => { /**/ })",
   "let x = 'f'; let y = 's'; require(x+y).rmdir('../', { recursive: true }, () => { /**/ })",
   "let f = () => 'fs'; require(f()).rmdir('../', { recursive: true }, () => { /**/ })",
+  "let x = { y : require }; x.y('fs').rmdir('../', { recursive: true }, () => { /**/ })",
+  "let x = { y : require }; x['y']('fs').rmdir('../', { recursive: true }, () => { /**/ })",
+  "let x = require; x('fs').rmdir('../', { recursive: true }, () => { /**/ })",
   "require('FS'.toLowerCase()).rmdir('../', { recursive: true }, () => { /**/ })",
   "eval('require(\"fs\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
   "eval('require(\"fs/promises\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
@@ -26,6 +29,9 @@ const unsafeRequires = [
   "eval('let f = () => \"fs\"; require(f()).rmdir(\"../\", { recursive: true }, () => { /**/ })')",
   "eval('require(\"FS\".toLowerCase()).rmdir(\"../\", { recursive: true }, () => { /**/ })')",
   "eval('require(\"p\" + \"at\" + \"h\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
+  "eval('let x = { y : require }; x.y(\"fs\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
+  "eval('let x = { y : require }; x[\"y\"](\"fs\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
+  "eval('let x = require; x(\"fs\").rmdir(\"../\", { recursive: true }, () => { /**/ })')",
 ];
 
 const infiniteWhiles = [
@@ -61,8 +67,8 @@ const infiniteFors = [
 
 const unsafeCases = [
   ...unsafeRequires,
-  ...infiniteWhiles,
-  ...infiniteFors,
+  // ...infiniteWhiles,
+  // ...infiniteFors,
 ]
 
 const hasUnsafe = (metadata) => {

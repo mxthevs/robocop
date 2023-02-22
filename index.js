@@ -48,8 +48,8 @@ const BINARY_OPS = {
 const isForbidden = (module) => {
   const forbiddenRequires =
     ['fs', 'child_process', 'path', 'os', 'http', 'https', 'net', 'tls', 'dns', 'url', 'util', 'vm']
-    .map(module => [module, `${module}/promises`, `node:${module}`, `node:${module}/promises`])
-    .flat();
+      .map(module => [module, `${module}/promises`, `node:${module}`, `node:${module}/promises`])
+      .flat();
 
   return forbiddenRequires.includes(module) || module === 'unknown';
 }
@@ -59,11 +59,17 @@ const getVariables = (tokens) => {
 
   walk(tokens, node => {
     if (node.type === 'VariableDeclarator') {
-      variables[node.id.name] = node.init.value;
+      variables[node.id.name] = node.init.type === 'Literal' ? node.init.value : node.init.name;
     } else if (node.type === 'ForStatement') {
       if (node.init && node.init.type === 'VariableDeclaration') {
         variables[node.init.declarations[0].id.name] = node.init.declarations[0].init.value;
       }
+    } else if (node.type === 'ObjectExpression') {
+      node.properties.forEach(property => {
+        if (property.key.type === 'Identifier') {
+          variables[property.key.name] = property.value.name;
+        }
+      });
     }
   });
 
@@ -71,7 +77,7 @@ const getVariables = (tokens) => {
 }
 
 const parseExternalCode = (code) => {
-  const tokens = esprima.parseScript(code, { range: true });
+  const tokens = esprima.parseScript(code, { range: true, loc: true });
   const variables = getVariables(tokens);
 
   return { tokens, variables };
@@ -95,8 +101,16 @@ const parseBinaryExpressionValues = (expression, variables) => {
   return BINARY_OPS[expression.operator](left, right);
 }
 
-const isRequire = (node) => {
-  return node.type === 'CallExpression' && node.callee.name === 'require'
+const isRequire = (node, variables) => {
+  return node.type === 'CallExpression'
+    && (node.callee.name === 'require'
+      || (node.callee.type === 'MemberExpression'
+        && (node.callee.computed === false
+          && node.callee.property.type === 'Identifier'
+          ? variables[node.callee.property.name] === 'require'
+          : node.callee.property.type.value)
+        || node.callee.computed === true && variables[node.callee.property.value] === 'require')
+      || node.callee.type === 'Identifier' && variables[node.callee.name] === 'require');
 }
 
 const isEval = (node) => {
@@ -161,15 +175,15 @@ const forHasBinaryExpressionTest = (node) => {
 
 const walkRequires = (tokens, variables = {}, callback) => {
   walk(tokens, node => {
-    if (isRequire(node) && hasLiteralArgument(node)) {
+    if (isRequire(node, variables) && hasLiteralArgument(node)) {
       callback(node.arguments[0].value);
-    } else if (isRequire(node) && hasIdentifierArgument(node)) {
+    } else if (isRequire(node, variables) && hasIdentifierArgument(node)) {
       callback(variables[node.arguments[0].name]);
-    } else if (isRequire(node) && hasBinaryExpressionArgument(node)) {
+    } else if (isRequire(node, variables) && hasBinaryExpressionArgument(node)) {
       const expression = node.arguments[0];
       const result = parseBinaryExpressionValues(expression, variables);
       callback(result);
-    } else if (isRequire(node) && hasCallExpressionArgument(node)) {
+    } else if (isRequire(node, variables) && hasCallExpressionArgument(node)) {
       // if the argument for require is a CallExpression, e.g require(fn())
       // just hardcode a forbidden module
       // TODO: parse the code inside the CallExpression
@@ -223,7 +237,7 @@ const walkFors = (tokens, variables, callback) => {
       callback(true);
     } else if (isFor(node) && forHasLiteralTest(node)) {
       callback(!!node.test.value);
-    }  else if (isFor(node) && forHasIdentifierTest(node)) {
+    } else if (isFor(node) && forHasIdentifierTest(node)) {
       callback(variables[node.test.name]);
     } else if (isFor(node) && forHasBinaryExpressionTest(node)) {
       const expression = node.test;
