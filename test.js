@@ -67,8 +67,8 @@ const infiniteFors = [
 
 const unsafeCases = [
   ...unsafeRequires,
-  // ...infiniteWhiles,
-  // ...infiniteFors,
+  ...infiniteWhiles,
+  ...infiniteFors,
 ]
 
 const hasUnsafe = (metadata) => {
