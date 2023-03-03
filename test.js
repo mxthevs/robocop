@@ -22,6 +22,7 @@ const unsafeRequires = [
   "require(false ? 'fs' : 'fs')",
   "let x = 'f' + 's'; require(x)",
   "let y = 'f'; let x = f + 's'; require(x)",
+  "let f = () => 'fs'; let x = f(); require(x)",
   "eval('require(\"fs\")')",
   "eval('require(\"fs/promises\")')",
   "eval('require(\"node:fs\")')",
@@ -38,6 +39,7 @@ const unsafeRequires = [
   "eval('require(false ? \"fs\" : \"fs\")')",
   "eval('let x = \"f\" + \"s\"; require(x)')",
   "eval('let y = \"f\"; let x = f + \"s\"; require(x)')",
+  "eval('let f = () => \"fs\"; let x = f(); require(x)')",
 ];
 
 const infiniteWhiles = [
