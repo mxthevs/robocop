@@ -101,6 +101,31 @@ const parseBinaryExpressionValues = (expression, variables) => {
   return BINARY_OPS[expression.operator](left, right);
 }
 
+const parseConditionalExpressionValues = (expression, variables) => {
+  const test =
+    expression.test.type === 'Literal'
+      ? expression.test.value
+      : (expression.test.type === 'Identifier'
+        ? variables[expression.test.name]
+        : parseBinaryExpressionValues(expression.test, variables));
+
+  const consequent =
+    expression.consequent.type === 'Literal'
+      ? expression.consequent.value
+      : (expression.consequent.type === 'Identifier'
+        ? variables[expression.consequent.name]
+        : parseBinaryExpressionValues(expression.consequent, variables));
+
+  const alternate =
+    expression.alternate.type === 'Literal'
+      ? expression.alternate.value
+      : (expression.alternate.type === 'Identifier'
+        ? variables[expression.alternate.name]
+        : parseBinaryExpressionValues(expression.alternate, variables));
+
+  return test ? consequent : alternate;
+}
+
 const isRequire = (node, variables) => {
   return node.type === 'CallExpression'
     && (node.callee.name === 'require'
@@ -139,6 +164,10 @@ const hasBinaryExpressionArgument = (node) => {
 
 const hasCallExpressionArgument = (node) => {
   return node.arguments[0].type === 'CallExpression';
+}
+
+const hasConditionalExpressionArgument = (node) => {
+  return node.arguments[0].type === 'ConditionalExpression';
 }
 
 const whileHasLiteralArgument = (node) => {
@@ -188,6 +217,10 @@ const walkRequires = (tokens, variables = {}, callback) => {
       // just hardcode a forbidden module
       // TODO: parse the code inside the CallExpression
       callback('unknown');
+    } else if (isRequire(node, variables) && hasConditionalExpressionArgument(node)) {
+      const expression = node.arguments[0];
+      const result = parseConditionalExpressionValues(expression, variables);
+      callback(result);
     }
   });
 
