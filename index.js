@@ -59,7 +59,21 @@ const getVariables = (tokens) => {
 
   walk(tokens, node => {
     if (node.type === 'VariableDeclarator') {
-      variables[node.id.name] = node.init.type === 'Literal' ? node.init.value : node.init.name;
+      variables[node.id.name] =
+        node.init.type === 'Literal'
+          ? node.init.value
+          : (node.init.type === 'Identifier'
+            ? node.init.name
+            : (node.init.type === 'BinaryExpression'
+              ? (
+                // TODO: parse binary expression values is not supported yet
+                // because it may depend on variables that are not yet defined
+                // parseBinaryExpressionValues(node.init, variables)
+                'unknown'
+              )
+              : (node.init.type === 'ConditionalExpression'
+                ? parseConditionalExpressionValues(node.init, variables)
+                : 'unknown')));
     } else if (node.type === 'ForStatement') {
       if (node.init && node.init.type === 'VariableDeclaration') {
         variables[node.init.declarations[0].id.name] = node.init.declarations[0].init.value;
