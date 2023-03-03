@@ -77,7 +77,7 @@ const getVariables = (tokens) => {
 }
 
 const parseExternalCode = (code) => {
-  const tokens = esprima.parseScript(code, { range: true, loc: true });
+  const tokens = esprima.parseScript(code);
   const variables = getVariables(tokens);
 
   return { tokens, variables };
