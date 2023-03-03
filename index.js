@@ -364,6 +364,16 @@ const runExternalCode = (code) => {
   return result;
 }
 
+const main = () => {
+  const code = process.argv[2];
+  const result = runExternalCode(code);
+  console.log(result);
+}
+
+if (!process.env.ROBOCOP_TEST) {
+  main();
+}
+
 module.exports = {
   parseExternalCode,
   hasForbiddenRequires,
