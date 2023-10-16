@@ -49,12 +49,14 @@ const infiniteWhiles = [
   "let x = 1; while (x) { }",
   "let x = 1; let y = 1; while (x+y) { }",
   "while (1 > 0) { }",
+  "let f = () => true; while (f()) { }",
   "eval('while (true) { }')",
   "eval('while (1) { }')",
   "eval('let x = true; while (x) { }')",
   "eval('let x = 1; while (x) { }')",
   "eval('let x = 1; let y = 1; while (x+y) { }')",
   "eval('while (1 > 0) { }')",
+  "eval('let f = () => true; while (f()) { }')",
 ]
 
 const infiniteFors = [
