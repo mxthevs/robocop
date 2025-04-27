@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "minify": "terser index.js -o robocop.min.js",
-    "shebang": "echo '#!/usr/bin/env node' | cat - robocop.min.js > robocop && chmod +x robocop",
+    "shebang": "echo '#!/usr/bin/env node' | cat - robocop.min.js > bin && chmod +x bin",
     "make": "npm run minify && npm run shebang",
     "test": "ROBOCOP_TEST=1 node index.js"
   },

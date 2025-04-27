@@ -168,6 +168,10 @@ const hasLiteralArgument = (node) => {
   return node.arguments[0].type === 'Literal';
 }
 
+const hasTemplateLiteralArgument = (node) => {
+  return node.arguments[0].type === 'TemplateLiteral';
+}
+
 const hasIdentifierArgument = (node) => {
   return node.arguments[0].type === 'Identifier';
 }
@@ -227,9 +231,8 @@ const walkRequires = (tokens, variables = {}, callback) => {
       const result = parseBinaryExpressionValues(expression, variables);
       callback(result);
     } else if (isRequire(node, variables) && hasCallExpressionArgument(node)) {
-      // if the argument for require is a CallExpression, e.g require(fn())
-      // just hardcode a forbidden module
-      // TODO: parse the code inside the CallExpression
+      callback('unknown');
+    } else if (isRequire(node, variables) && hasTemplateLiteralArgument(node)) {
       callback('unknown');
     } else if (isRequire(node, variables) && hasConditionalExpressionArgument(node)) {
       const expression = node.arguments[0];
@@ -338,36 +341,25 @@ const getForbiddenRequires = ({ tokens, variables }) => {
   return forbiddenRequires;
 }
 
-const runExternalCode = (code) => {
+const analyze = (code) => {
   const { tokens, variables } = parseExternalCode(code);
 
-  const hasForbidden = hasForbiddenRequires({ tokens, variables });
   const hasInfinite = hasInfiniteLoops({ tokens, variables });
-
   if (hasInfinite) {
     throw new InfiniteLoopError();
   }
 
+  const hasForbidden = hasForbiddenRequires({ tokens, variables });
   if (hasForbidden) {
     const forbiddenRequires = getForbiddenRequires({ tokens, variables });
     throw new ForbiddenModuleError(forbiddenRequires);
   }
 
-  let env = process.env;
-  if (Object.keys(process.env).length > 0) {
-    process.env = {};
-  }
-
-  const result = eval(code);
-  process.env = env;
-
-  return result;
 }
 
 const main = () => {
   const code = process.argv[2];
-  const result = runExternalCode(code);
-  console.log(result);
+  analyze(code);
 }
 
 if (!process.env.ROBOCOP_TEST) {
@@ -378,5 +370,5 @@ module.exports = {
   parseExternalCode,
   hasForbiddenRequires,
   hasInfiniteLoops,
-  run: runExternalCode
+  analyze,
 }
